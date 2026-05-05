@@ -1,5 +1,5 @@
-using System.CodeDom.Compiler;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 [ExecuteAlways]
 public class TerrainGenerator : MonoBehaviour {
@@ -111,12 +111,14 @@ public class TerrainGenerator : MonoBehaviour {
 
         // create mesh based on vertices and triangles 
         mesh = new Mesh();
+        mesh.indexFormat = IndexFormat.UInt32;
 
         mesh.vertices = vertices;
         mesh.triangles = triangles;
         mesh.colors = colors;
 
         mesh.RecalculateNormals();
+        mesh.RecalculateBounds();
         GetComponent<MeshFilter>().sharedMesh = mesh;
     }
 }
