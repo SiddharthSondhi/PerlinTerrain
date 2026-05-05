@@ -1,11 +1,13 @@
 using System.CodeDom.Compiler;
 using UnityEngine;
 
+[ExecuteAlways]
 public class TerrainGenerator : MonoBehaviour {
-    int gridSize = 64;
 
-    public float frequencyScale = 0.1f;
-    public float amplitudeScale = 10.0f;
+    [SerializeField] private int gridSize = 64;
+    [SerializeField] private float gridCellSize = 1f;
+    [SerializeField] private float frequencyScale = 0.1f;
+    [SerializeField] private float amplitudeScale = 10.0f;
 
     private Mesh mesh;
 
@@ -14,10 +16,14 @@ public class TerrainGenerator : MonoBehaviour {
         GenerateTerrain();
     }
 
-    [ExecuteAlways]
-    private void GenerateTerrain() {
-        mesh = new Mesh();
+    private void OnValidate() {
+        gridSize = Mathf.Max(1, gridSize);
+        frequencyScale = Mathf.Max(0.0001f, frequencyScale);
 
+        GenerateTerrain();
+    }
+
+    private void GenerateTerrain() {
         Vector3[] vertices = new Vector3[(gridSize + 1) * (gridSize + 1)];
 
         // iterate through grid points, gridsquare + 1 vertices each direction. 
@@ -28,7 +34,7 @@ public class TerrainGenerator : MonoBehaviour {
                 float perlinNoiseVal = Mathf.PerlinNoise(x * frequencyScale, z * frequencyScale);
                 float y = perlinNoiseVal * amplitudeScale;
 
-                vertices[i] = new Vector3(x, y, z);
+                vertices[i] = new Vector3((x - gridSize / 2f) * gridCellSize, y, (z - gridSize / 2f) * gridCellSize);
                 i++;
             }
 
@@ -56,10 +62,12 @@ public class TerrainGenerator : MonoBehaviour {
             }
         }
 
+        mesh = new Mesh();
+
         mesh.vertices = vertices;
         mesh.triangles = triangles;
 
         mesh.RecalculateNormals();
-        GetComponent<MeshFilter>().mesh = mesh;
+        GetComponent<MeshFilter>().sharedMesh = mesh;
     }
 }
