@@ -15,6 +15,9 @@ public class TerrainGenerator : MonoBehaviour {
     [SerializeField] private float freqScaleFactor = 2f;
     [SerializeField] private float amplitudeScaleFactor = 0.5f;
 
+    [SerializeField] private Transform waterPlane;
+    [SerializeField] private float waterHeight = 0.3f;
+
     private Mesh mesh;
 
 
@@ -66,17 +69,18 @@ public class TerrainGenerator : MonoBehaviour {
         for (int z = 0; z < gridSize + 1; z++) { 
             for (int x = 0; x < gridSize + 1; x++) {
                 // get height value from perlin noise
-                float y = getOctaveNoise(x, z) ;
-                vertices[i] = new Vector3((x - gridSize / 2f) * gridCellSize, y * amplitude, (z - gridSize / 2f) * gridCellSize);
+                float y = getOctaveNoise(x, z);
+                float centeredY = y * 2f - 1f;
+                vertices[i] = new Vector3((x - gridSize / 2f) * gridCellSize, centeredY * amplitude, (z - gridSize / 2f) * gridCellSize);
 
                 // set vertex colors based on height
-                if (y < 0.3f)
+                if (y < waterHeight)
                     colors[i] = new Color(0.153f, 0.882f, 0.91f); // water
                 else if (y < 0.4f)
                     colors[i] = new Color(0.8f, 0.7f, 0.5f); // sand
                 else if (y < 0.6f)
                     colors[i] = new Color(0.1f, 0.7f, 0.2f); // grass
-                else if (y < 0.6f)
+                else if (y < 0.7f)
                     colors[i] = new Color(0.5f, 0.5f, 0.5f); // rock
                 else
                     colors[i] = new Color(1f, 1f, 1f); // snow
@@ -120,5 +124,12 @@ public class TerrainGenerator : MonoBehaviour {
         mesh.RecalculateNormals();
         mesh.RecalculateBounds();
         GetComponent<MeshFilter>().sharedMesh = mesh;
+
+        //create water plan
+        if (waterPlane != null) {
+            float terrainSize = gridSize * gridCellSize;
+            waterPlane.position = new Vector3(0f, (waterHeight * 2f - 1f) * amplitude, 0f);
+            waterPlane.localScale = new Vector3(terrainSize / 10f, 1f, terrainSize / 10f);
+        }
     }
 }
