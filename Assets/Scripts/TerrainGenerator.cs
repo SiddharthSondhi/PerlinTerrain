@@ -15,10 +15,13 @@ public class TerrainGenerator : MonoBehaviour {
     [SerializeField] private float freqScaleFactor = 2f;
     [SerializeField] private float amplitudeScaleFactor = 0.5f;
 
+    [SerializeField] private int seed = 0;
+
     [SerializeField] private Transform waterPlane;
     [SerializeField] private float waterHeight = 0.3f;
 
     private Mesh mesh;
+    private Vector2[] octaveOffsets;
 
 
 
@@ -37,7 +40,19 @@ public class TerrainGenerator : MonoBehaviour {
         GenerateTerrain();
     }
 
-    // gets multiple octaves of noise for more detail on terrain
+    // build a deterministic per-octave (offsetX, offsetZ) table so each octave samples
+    // an independent region of noise space rather than the same diagonal
+    private void GenerateOctaveOffsets() {
+        System.Random rng = new System.Random(seed);
+        octaveOffsets = new Vector2[octaves];
+        for (int i = 0; i < octaves; i++) {
+            float ox = rng.Next(-100000, 100000);
+            float oz = rng.Next(-100000, 100000);
+            octaveOffsets[i] = new Vector2(ox, oz);
+        }
+    }
+
+    // gets multiple octaves of noise
     private float getOctaveNoise(float x, float z) {
         float totalNoise = 0f;
         float amplitude = 1f;
@@ -46,7 +61,11 @@ public class TerrainGenerator : MonoBehaviour {
 
 
         for (int i = 0; i < octaves; i++) {
-            float noise = Mathf.PerlinNoise((x + offset) * frequency, (z + offset) * frequency);
+            Vector2 octaveOffset = octaveOffsets[i];
+            float noise = Mathf.PerlinNoise(
+                (x + offset + octaveOffset.x) * frequency,
+                (z + offset + octaveOffset.y) * frequency
+            );
 
             totalNoise += noise * amplitude;
             amplitudeSum += amplitude;
@@ -60,6 +79,8 @@ public class TerrainGenerator : MonoBehaviour {
     }
 
     private void GenerateTerrain() {
+        GenerateOctaveOffsets();
+
         Vector3[] vertices = new Vector3[(gridSize + 1) * (gridSize + 1)];
         Color[] colors = new Color[vertices.Length];
 
