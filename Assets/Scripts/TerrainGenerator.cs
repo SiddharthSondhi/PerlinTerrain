@@ -4,6 +4,8 @@ using UnityEngine.Rendering;
 [ExecuteAlways]
 public class TerrainGenerator : MonoBehaviour {
 
+    public enum NoiseType { Perlin, Gradient }
+
     [SerializeField] private int gridSize = 64;
     [SerializeField] private float gridCellSize = 1f;
 
@@ -16,12 +18,13 @@ public class TerrainGenerator : MonoBehaviour {
     [SerializeField] private float amplitudeScaleFactor = 0.5f;
 
     [SerializeField] private int seed = 0;
+    [SerializeField] private NoiseType noiseType = NoiseType.Perlin;
 
     [SerializeField] private Transform waterPlane;
     [SerializeField] private float waterHeight = 0.3f;
 
     private Mesh mesh;
-    private Vector2[] octaveOffsets;
+    private INoise2D[] noiseLayers;
 
 
 
@@ -40,15 +43,17 @@ public class TerrainGenerator : MonoBehaviour {
         GenerateTerrain();
     }
 
-    // build a deterministic per-octave (offsetX, offsetZ) table so each octave samples
-    // an independent region of noise space rather than the same diagonal
-    private void GenerateOctaveOffsets() {
+    // build one independent noise field per octave, each seeded from the master RNG
+    // so octaves sample fully decorrelated noise
+    private void GenerateNoiseLayers() {
         System.Random rng = new System.Random(seed);
-        octaveOffsets = new Vector2[octaves];
+        noiseLayers = new INoise2D[octaves];
         for (int i = 0; i < octaves; i++) {
-            float ox = rng.Next(-100000, 100000);
-            float oz = rng.Next(-100000, 100000);
-            octaveOffsets[i] = new Vector2(ox, oz);
+            int layerSeed = rng.Next();
+            noiseLayers[i] = noiseType switch {
+                NoiseType.Gradient => new GradientNoise2D(layerSeed),
+                _                  => new PerlinNoise2D(layerSeed),
+            };
         }
     }
 
@@ -61,10 +66,9 @@ public class TerrainGenerator : MonoBehaviour {
 
 
         for (int i = 0; i < octaves; i++) {
-            Vector2 octaveOffset = octaveOffsets[i];
-            float noise = Mathf.PerlinNoise(
-                (x + offset + octaveOffset.x) * frequency,
-                (z + offset + octaveOffset.y) * frequency
+            float noise = noiseLayers[i].Sample(
+                (x + offset) * frequency,
+                (z + offset) * frequency
             );
 
             totalNoise += noise * amplitude;
@@ -79,7 +83,7 @@ public class TerrainGenerator : MonoBehaviour {
     }
 
     private void GenerateTerrain() {
-        GenerateOctaveOffsets();
+        GenerateNoiseLayers();
 
         Vector3[] vertices = new Vector3[(gridSize + 1) * (gridSize + 1)];
         Color[] colors = new Color[vertices.Length];

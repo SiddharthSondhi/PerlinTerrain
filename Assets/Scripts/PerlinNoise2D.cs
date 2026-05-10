@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public class PerlinNoise2D {
+public class PerlinNoise2D : INoise2D {
     // 8 unit gradient vectors at 45 degree intervals; (hash & 7) picks one
     private static readonly Vector2[] gradients = {
         new Vector2( 1f,  0f),
